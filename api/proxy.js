@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   const { path } = req.query;
-  const targetUrl = `https://api.klingai.com/${path}`;
+  const targetUrl = `https://queue.fal.run/${path}`;
 
   try {
     const fetchOptions = {
