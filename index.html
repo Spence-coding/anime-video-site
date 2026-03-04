@@ -630,8 +630,8 @@ async function pollResult(apiKey, requestId) {
       { headers: { 'Authorization': `Key ${apiKey}` } }
     );
     const statusData = await statusRes.json();
-    const status = statusData.status;
-    log(`状态: ${status || JSON.stringify(statusData)}`);
+    const status = statusData.status || statusData.raw;
+    log(`状态: ${typeof status === 'string' ? status : JSON.stringify(statusData).slice(0,120)}`);
 
     if (status === 'COMPLETED') {
       // Fetch result from response_url or standard result endpoint
