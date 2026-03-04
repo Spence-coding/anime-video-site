@@ -28,8 +28,13 @@ export default async function handler(req, res) {
     }
 
     const response = await fetch(targetUrl, fetchOptions);
-    const data = await response.json();
-
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { raw: text };
+    }
     return res.status(response.status).json(data);
   } catch (err) {
     return res.status(500).json({ error: err.message });
