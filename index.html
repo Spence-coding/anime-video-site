@@ -623,22 +623,33 @@ async function generateVideo() {
 // ── Poll ──────────────────────────────────────────────────────────
 async function pollResult(apiKey, requestId) {
   try {
-    // Check status
-    const statusRes = await fetch(`/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${requestId}/status`, {
-      headers: { 'Authorization': `Key ${apiKey}` }
-    });
-
+    // fal.ai status: GET /requests/{id}/status
+    const encodedId = encodeURIComponent(requestId);
+    const statusRes = await fetch(
+      `/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${encodedId}/status`,
+      { headers: { 'Authorization': `Key ${apiKey}` } }
+    );
     const statusData = await statusRes.json();
     const status = statusData.status;
-    log(`状态: ${status}`);
+    log(`状态: ${status || JSON.stringify(statusData)}`);
 
     if (status === 'COMPLETED') {
-      // Fetch actual result
-      const resultRes = await fetch(`/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${requestId}`, {
+      // Fetch result from response_url or standard result endpoint
+      const resultUrl = statusData.response_url
+        ? statusData.response_url.replace('https://queue.fal.run/', '/api/proxy?path=')
+        : `/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${encodedId}`;
+
+      const resultRes = await fetch(resultUrl, {
         headers: { 'Authorization': `Key ${apiKey}` }
       });
       const resultData = await resultRes.json();
-      const videoUrl = resultData.video?.url || resultData.output?.video?.url || resultData.output?.video_url;
+
+      // Try all known video URL locations
+      const videoUrl =
+        resultData?.video?.url ||
+        resultData?.output?.video?.url ||
+        resultData?.output?.video_url ||
+        resultData?.videos?.[0]?.url;
 
       if (videoUrl) {
         log('✓ 生成成功！', 'success');
@@ -646,6 +657,7 @@ async function pollResult(apiKey, requestId) {
         addToHistory(videoUrl, document.getElementById('prompt').value.trim());
         showNotif('视频生成成功！🎉');
       } else {
+        log('响应: ' + JSON.stringify(resultData).slice(0, 200), 'info');
         throw new Error('未获取到视频链接，请重试');
       }
       setLoading(false);
@@ -654,7 +666,6 @@ async function pollResult(apiKey, requestId) {
       throw new Error(statusData.error || '生成失败，请修改提示词重试');
 
     } else {
-      // IN_QUEUE or IN_PROGRESS
       setTimeout(() => pollResult(apiKey, requestId), 5000);
     }
 
