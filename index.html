@@ -587,7 +587,7 @@ async function generateVideo() {
 
   try {
     // Submit to fal.ai queue (Pika v2.2)
-    const submitRes = await fetch('/api/proxy?path=fal-ai/pika-v2-2/text-to-video', {
+    const submitRes = await fetch('/api/proxy?path=fal-ai/pika/v2.2/text-to-video', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -623,7 +623,7 @@ async function generateVideo() {
 // ── Poll ──────────────────────────────────────────────────────────
 async function pollResult(apiKey, requestId) {
   try {
-    const res = await fetch(`/api/proxy?path=fal-ai/pika-v2-2/text-to-video/requests/${requestId}`, {
+    const res = await fetch(`/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${requestId}`, {
       headers: { 'Authorization': `Key ${apiKey}` }
     });
 
