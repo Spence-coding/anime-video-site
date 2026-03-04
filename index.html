@@ -916,7 +916,7 @@ async function generateVideo() {
     log('正在提交生成任务...', 'info');
     setLoadingText('正在提交任务...');
 
-    const res = await fetch('https://api.klingai.com/v1/videos/text2video', {
+    const res = await fetch('/api/proxy?path=v1/videos/text2video', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -956,7 +956,7 @@ async function pollResult(token) {
   try {
     const freshToken = await generateJWT(ak, sk);
 
-    const res = await fetch(`https://api.klingai.com/v1/videos/text2video/${currentTaskId}`, {
+    const res = await fetch(`/api/proxy?path=v1/videos/text2video/${currentTaskId}`, {
       headers: { 'Authorization': `Bearer ${freshToken}` }
     });
 
