@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>幻影动漫 · AI视频生成</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Zhi+Mang+Xing&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0f;
+    --paper: #f5f0e8;
+    --red: #c0392b;
+    --gold: #d4a017;
+    --muted: #7a7060;
+    --panel: #1a1820;
+    --accent: #e8d5a3;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Noto Serif SC', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Screentone background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #ffffff08 1px, transparent 1px);
+    background-size: 6px 6px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Speed lines decoration */
+  .speed-lines {
+    position: fixed;
+    top: 0; right: 0;
+    width: 50vw; height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    opacity: 0.04;
+  }
+  .speed-lines::before {
+    content: '';
+    position: absolute;
+    top: 50%; right: 0;
+    width: 200%;
+    height: 3px;
+    background: linear-gradient(to left, #fff 0%, transparent 100%);
+    transform-origin: right center;
+    box-shadow:
+      0 -80px 0 1px #fff, 0 -160px 0 1px #fff, 0 -240px 0 2px #fff,
+      0 -320px 0 1px #fff, 0 -400px 0 1px #fff, 0 -480px 0 2px #fff,
+      0 80px 0 1px #fff, 0 160px 0 1px #fff, 0 240px 0 2px #fff,
+      0 320px 0 1px #fff, 0 400px 0 1px #fff, 0 480px 0 2px #fff;
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #ffffff15;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+
+  .logo-jp {
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 900;
+    font-size: 1.8rem;
+    color: var(--paper);
+    letter-spacing: 0.1em;
+    position: relative;
+  }
+
+  .logo-jp::after {
+    content: '幻影';
+    position: absolute;
+    top: 2px; left: 2px;
+    color: var(--red);
+    z-index: -1;
+  }
+
+  .logo-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .header-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    border: 1px solid #ffffff20;
+    padding: 0.3rem 0.8rem;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 10;
+    padding: 5rem 3rem 3rem;
+    max-width: 900px;
+  }
+
+  .hero-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--red);
+    letter-spacing: 0.4em;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .hero-label::before {
+    content: '';
+    display: block;
+    width: 30px;
+    height: 1px;
+    background: var(--red);
+  }
+
+  .hero-title {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-title span {
+    color: var(--gold);
+    position: relative;
+    display: inline-block;
+  }
+
+  .hero-title span::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 3px; left: 3px;
+    color: var(--red);
+    z-index: -1;
+    opacity: 0.6;
+  }
+
+  .hero-desc {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.8;
+    max-width: 500px;
+  }
+
+  /* Main layout */
+  .main {
+    position: relative;
+    z-index: 10;
+    padding: 2rem 3rem 5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 1200px;
+  }
+
+  /* Panel */
+  .panel {
+    background: #ffffff05;
+    border: 1px solid #ffffff15;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 40px;
+    background: var(--red);
+  }
+
+  .panel-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  /* Config section */
+  .config-section {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .api-input-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  input[type="text"], input[type="password"], textarea, select {
+    width: 100%;
+    background: #0a0a0f;
+    border: 1px solid #ffffff20;
+    color: var(--paper);
+    padding: 0.75rem 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--gold);
+  }
+
+  select option {
+    background: #1a1820;
+  }
+
+  textarea {
+    min-height: 120px;
+    line-height: 1.6;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--red);
+    color: #fff;
+    width: 100%;
+    padding: 1rem;
+    font-size: 0.85rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, #ffffff20, transparent);
+    transition: left 0.4s;
+  }
+
+  .btn-primary:hover::before { left: 100%; }
+  .btn-primary:hover { background: #a93226; }
+  .btn-primary:disabled { background: #444; cursor: not-allowed; color: #888; }
+
+  .btn-sm {
+    background: transparent;
+    border: 1px solid #ffffff20;
+    color: var(--muted);
+    padding: 0.5rem 0.8rem;
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btn-save {
+    background: #ffffff10;
+    border: 1px solid #ffffff20;
+    color: var(--paper);
+    padding: 0.75rem 1.2rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-save:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #ffffff15;
+  }
+
+  .tab {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+
+  /* Style grid */
+  .style-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .style-chip {
+    border: 1px solid #ffffff15;
+    padding: 0.5rem;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .style-chip:hover { border-color: var(--gold); color: var(--gold); }
+  .style-chip.active { border-color: var(--red); color: var(--paper); background: #c0392b20; }
+
+  /* Output panel */
+  .output-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+
+  .video-frame {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border: 1px solid #ffffff10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .video-placeholder {
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .video-placeholder .big-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.3;
+  }
+
+  .video-placeholder p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: #ffffff20;
+  }
+
+  /* Manga panel decoration on video */
+  .video-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 8px solid transparent;
+    border-image: repeating-linear-gradient(
+      45deg,
+      #ffffff08 0px, #ffffff08 2px,
+      transparent 2px, transparent 8px
+    ) 8;
+    pointer-events: none;
+  }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* Loading state */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: #000000cc;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .loading-overlay.active { display: flex; }
+
+  .loading-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .progress-bar {
+    width: 200px;
+    height: 2px;
+    background: #ffffff15;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--red);
+    animation: scan 1.5s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  /* Status log */
+  .status-log {
+    background: #000;
+    border: 1px solid #ffffff10;
+    padding: 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    line-height: 1.8;
+    color: #ffffff40;
+    min-height: 80px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .status-log .log-line { color: #ffffff60; }
+  .status-log .log-line.success { color: #2ecc71; }
+  .status-log .log-line.error { color: var(--red); }
+  .status-log .log-line.info { color: var(--gold); }
+
+  /* History */
+  .history-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .history-item {
+    aspect-ratio: 16/9;
+    background: #ffffff05;
+    border: 1px solid #ffffff10;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .history-item:hover { border-color: var(--gold); }
+
+  .history-item video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .history-item .del-btn {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: #c0392b;
+    color: #fff;
+    border: none;
+    width: 20px; height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .history-item:hover .del-btn { display: flex; }
+
+  .empty-history {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: #ffffff20;
+    letter-spacing: 0.2em;
+  }
+
+  /* Download btn */
+  .btn-download {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #ffffff20;
+    color: var(--muted);
+    padding: 0.75rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    margin-top: 0.5rem;
+  }
+  .btn-download:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-download:disabled, .btn-download[disabled] { opacity: 0.3; pointer-events: none; }
+
+  /* Range */
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--red);
+    margin-top: 0.3rem;
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .range-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold);
+    min-width: 2.5rem;
+    text-align: right;
+  }
+
+  /* Notification */
+  .notif {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    background: var(--panel);
+    border-left: 3px solid var(--gold);
+    padding: 1rem 1.5rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--paper);
+    z-index: 1000;
+    transform: translateX(120%);
+    transition: transform 0.3s;
+    max-width: 300px;
+  }
+
+  .notif.show { transform: translateX(0); }
+  .notif.error { border-left-color: var(--red); }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid #ffffff10;
+    margin: 1.5rem 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ffffff20; }
+
+  @media (max-width: 768px) {
+    header { padding: 1.5rem; }
+    .hero { padding: 3rem 1.5rem 2rem; }
+    .main { padding: 1.5rem; grid-template-columns: 1fr; }
+    .output-panel { grid-column: 1; grid-row: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="speed-lines"></div>
+
+<header>
+  <div class="logo">
+    <span class="logo-jp">幻影动漫</span>
+    <span class="logo-sub">AI · VIDEO · GEN</span>
+  </div>
+  <div class="header-tag">PRIVATE BETA · v1.0</div>
+</header>
+
+<div class="hero">
+  <div class="hero-label">AI 驱动的动漫视频创作</div>
+  <h1 class="hero-title">
+    用文字<br>
+    <span data-text="召唤动漫">召唤动漫</span>
+  </h1>
+  <p class="hero-desc">输入你的想象，AI 为你生成动漫风格短视频。支持文生视频、多种动漫画风。</p>
+</div>
+
+<div class="main">
+
+  <!-- Left: Input Panel -->
+  <div>
+    <!-- API Config -->
+    <div class="panel" style="margin-bottom:1.5rem">
+      <div class="panel-title">⚙ API 配置</div>
+
+      <div class="config-section">
+        <label>ACCESS KEY</label>
+        <div class="api-input-row">
+          <input type="password" id="accessKey" placeholder="输入 Kling AI Access Key" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label>SECRET KEY</label>
+        <div class="api-input-row">
+          <input type="password" id="secretKey" placeholder="输入 Kling AI Secret Key" autocomplete="off">
+          <button class="btn-save" onclick="saveKeys()">保存</button>
+        </div>
+      </div>
+
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:var(--muted);line-height:1.8">
+        ⚠ Key 仅保存在本地浏览器，不会上传任何服务器
+      </div>
+    </div>
+
+    <!-- Prompt Panel -->
+    <div class="panel">
+      <div class="panel-title">✦ 创作输入</div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'text')">文生视频</div>
+        <div class="tab" onclick="switchTab(this,'image')" style="opacity:0.4;cursor:not-allowed" title="即将开放">图生视频</div>
+      </div>
+
+      <div class="config-section">
+        <label>画面描述（中文或英文均可）</label>
+        <textarea id="prompt" placeholder="例如：一位银发武士在樱花雨中拔剑，动漫风格，流畅动作，电影镜头..."></textarea>
+      </div>
+
+      <div class="config-section">
+        <label>反向提示词（不想出现的内容）</label>
+        <input type="text" id="negPrompt" placeholder="例如：低画质, 模糊, 变形, 丑陋">
+      </div>
+
+      <div class="config-section">
+        <label>动漫画风</label>
+        <div class="style-grid" id="styleGrid">
+          <div class="style-chip active" data-val="" onclick="selectStyle(this)">默认</div>
+          <div class="style-chip" data-val="anime" onclick="selectStyle(this)">日式动漫</div>
+          <div class="style-chip" data-val="manga" onclick="selectStyle(this)">漫画风</div>
+          <div class="style-chip" data-val="3d_animation" onclick="selectStyle(this)">3D动画</div>
+          <div class="style-chip" data-val="chibi" onclick="selectStyle(this)">Q版萌系</div>
+          <div class="style-chip" data-val="dark_fantasy" onclick="selectStyle(this)">暗黑奇幻</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="config-section">
+        <label>视频时长（秒）</label>
+        <div class="range-row">
+          <input type="range" id="duration" min="5" max="10" value="5" step="5" oninput="document.getElementById('durVal').textContent=this.value+'s'">
+          <span class="range-val" id="durVal">5s</span>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label>画面比例</label>
+        <select id="aspectRatio">
+          <option value="16:9">16:9 横屏</option>
+          <option value="9:16">9:16 竖屏</option>
+          <option value="1:1">1:1 方形</option>
+        </select>
+      </div>
+
+      <div class="config-section">
+        <label>生成模式</label>
+        <select id="model">
+          <option value="kling-v1">Kling v1（标准）</option>
+          <option value="kling-v1-5">Kling v1.5（高质量）</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" id="generateBtn" onclick="generateVideo()">
+        ▶ 开始生成
+      </button>
+    </div>
+  </div>
+
+  <!-- Right: Output Panel -->
+  <div class="panel output-panel">
+    <div class="panel-title">◈ 生成结果</div>
+
+    <div class="video-frame" id="videoFrame">
+      <div class="video-placeholder" id="videoPlaceholder">
+        <span class="big-icon">⬡</span>
+        <p>等待生成...</p>
+      </div>
+      <video id="resultVideo" controls style="display:none"></video>
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-text" id="loadingText">正在提交任务...</div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </div>
+    </div>
+
+    <a class="btn-download" id="downloadBtn" href="#" download="幻影动漫.mp4" style="pointer-events:none;opacity:0.3">
+      ↓ 下载视频
+    </a>
+
+    <hr class="divider">
+
+    <div class="panel-title">◈ 状态日志</div>
+    <div class="status-log" id="statusLog">
+      <div style="color:#ffffff20;font-family:'Share Tech Mono',monospace;font-size:0.65rem">// 等待操作...</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="panel-title">◈ 历史记录</div>
+    <div class="history-grid" id="historyGrid">
+      <div class="empty-history">暂无历史记录</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ─── JWT Generation ───────────────────────────────────────────────
+// Kling AI uses JWT (HS256) for authentication
+async function generateJWT(accessKey, secretKey) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: accessKey,
+    exp: now + 1800,
+    nbf: now - 5
+  };
+
+  const encode = obj => btoa(JSON.stringify(obj))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+
+  const headerB64 = encode(header);
+  const payloadB64 = encode(payload);
+  const sigInput = `${headerB64}.${payloadB64}`;
+
+  const keyData = new TextEncoder().encode(secretKey);
+  const msgData = new TextEncoder().encode(sigInput);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+
+  return `${headerB64}.${payloadB64}.${sigB64}`;
+}
+
+// ─── State ────────────────────────────────────────────────────────
+let currentTaskId = null;
+let pollTimer = null;
+let history = JSON.parse(localStorage.getItem('hyin_history') || '[]');
+let selectedStyle = '';
+
+// ─── Init ─────────────────────────────────────────────────────────
+window.onload = () => {
+  const ak = localStorage.getItem('hyin_ak');
+  const sk = localStorage.getItem('hyin_sk');
+  if (ak) document.getElementById('accessKey').value = ak;
+  if (sk) document.getElementById('secretKey').value = sk;
+  renderHistory();
+};
+
+// ─── Save Keys ────────────────────────────────────────────────────
+function saveKeys() {
+  const ak = document.getElementById('accessKey').value.trim();
+  const sk = document.getElementById('secretKey').value.trim();
+  if (!ak || !sk) { showNotif('请填写两个 Key', true); return; }
+  localStorage.setItem('hyin_ak', ak);
+  localStorage.setItem('hyin_sk', sk);
+  showNotif('Key 已保存到本地');
+}
+
+// ─── Tab ──────────────────────────────────────────────────────────
+function switchTab(el, mode) {
+  if (mode === 'image') return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─── Style ────────────────────────────────────────────────────────
+function selectStyle(el) {
+  document.querySelectorAll('.style-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedStyle = el.dataset.val;
+}
+
+// ─── Log ──────────────────────────────────────────────────────────
+function log(msg, type = '') {
+  const log = document.getElementById('statusLog');
+  const line = document.createElement('div');
+  const time = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  line.className = `log-line ${type}`;
+  line.textContent = `[${time}] ${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ─── Notif ────────────────────────────────────────────────────────
+function showNotif(msg, isError = false) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.className = 'notif show' + (isError ? ' error' : '');
+  setTimeout(() => n.className = 'notif', 3000);
+}
+
+// ─── Generate ─────────────────────────────────────────────────────
+async function generateVideo() {
+  const ak = document.getElementById('accessKey').value.trim();
+  const sk = document.getElementById('secretKey').value.trim();
+  const prompt = document.getElementById('prompt').value.trim();
+  const negPrompt = document.getElementById('negPrompt').value.trim();
+  const duration = document.getElementById('duration').value;
+  const aspectRatio = document.getElementById('aspectRatio').value;
+  const model = document.getElementById('model').value;
+
+  if (!ak || !sk) { showNotif('请先填写并保存 API Key', true); return; }
+  if (!prompt) { showNotif('请输入画面描述', true); return; }
+
+  setLoading(true);
+  log('正在生成 JWT 令牌...', 'info');
+
+  try {
+    const token = await generateJWT(ak, sk);
+
+    // Build prompt with style
+    let finalPrompt = prompt;
+    const styleMap = {
+      anime: '，日式动漫风格，精美作画',
+      manga: '，黑白漫画风格，清晰线条',
+      '3d_animation': '，3D动画风格，精致建模',
+      chibi: '，Q版萌系风格，可爱圆润',
+      dark_fantasy: '，暗黑奇幻风格，史诗画面'
+    };
+    if (selectedStyle && styleMap[selectedStyle]) {
+      finalPrompt += styleMap[selectedStyle];
+    }
+
+    const body = {
+      model_name: model,
+      prompt: finalPrompt,
+      negative_prompt: negPrompt || '低画质, 模糊, 变形',
+      cfg_scale: 0.5,
+      mode: 'std',
+      duration: parseInt(duration),
+      aspect_ratio: aspectRatio
+    };
+
+    log('正在提交生成任务...', 'info');
+    setLoadingText('正在提交任务...');
+
+    const res = await fetch('https://api.klingai.com/v1/videos/text2video', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+
+    if (data.code !== 0) {
+      throw new Error(data.message || `错误代码: ${data.code}`);
+    }
+
+    currentTaskId = data.data.task_id;
+    log(`任务已提交，ID: ${currentTaskId}`, 'success');
+    log('正在等待生成（约需1-3分钟）...', 'info');
+    setLoadingText('AI 生成中，请稍候...');
+
+    pollResult(token);
+
+  } catch (err) {
+    setLoading(false);
+    log(`错误: ${err.message}`, 'error');
+    showNotif(err.message, true);
+  }
+}
+
+// ─── Poll ─────────────────────────────────────────────────────────
+async function pollResult(token) {
+  if (!currentTaskId) return;
+
+  // Refresh token every poll in case it expires
+  const ak = document.getElementById('accessKey').value.trim();
+  const sk = document.getElementById('secretKey').value.trim();
+
+  try {
+    const freshToken = await generateJWT(ak, sk);
+
+    const res = await fetch(`https://api.klingai.com/v1/videos/text2video/${currentTaskId}`, {
+      headers: { 'Authorization': `Bearer ${freshToken}` }
+    });
+
+    const data = await res.json();
+
+    if (data.code !== 0) throw new Error(data.message);
+
+    const status = data.data.task_status;
+    log(`任务状态: ${status}`);
+
+    if (status === 'succeed') {
+      const videoUrl = data.data.task_result?.videos?.[0]?.url;
+      if (videoUrl) {
+        log('✓ 生成成功！', 'success');
+        showVideo(videoUrl);
+        addToHistory(videoUrl, document.getElementById('prompt').value.trim());
+        showNotif('视频生成成功！');
+      } else {
+        throw new Error('未获取到视频链接');
+      }
+      setLoading(false);
+    } else if (status === 'failed') {
+      throw new Error('生成失败，请尝试修改提示词');
+    } else {
+      // Still processing
+      pollTimer = setTimeout(() => pollResult(freshToken), 5000);
+    }
+
+  } catch (err) {
+    setLoading(false);
+    log(`错误: ${err.message}`, 'error');
+    showNotif(err.message, true);
+  }
+}
+
+// ─── Show Video ───────────────────────────────────────────────────
+function showVideo(url) {
+  const placeholder = document.getElementById('videoPlaceholder');
+  const video = document.getElementById('resultVideo');
+  const dlBtn = document.getElementById('downloadBtn');
+
+  placeholder.style.display = 'none';
+  video.style.display = 'block';
+  video.src = url;
+  video.play();
+
+  dlBtn.href = url;
+  dlBtn.style.pointerEvents = 'auto';
+  dlBtn.style.opacity = '1';
+}
+
+// ─── History ──────────────────────────────────────────────────────
+function addToHistory(url, prompt) {
+  history.unshift({ url, prompt, time: Date.now() });
+  if (history.length > 12) history = history.slice(0, 12);
+  localStorage.setItem('hyin_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const grid = document.getElementById('historyGrid');
+  if (!history.length) {
+    grid.innerHTML = '<div class="empty-history">暂无历史记录</div>';
+    return;
+  }
+  grid.innerHTML = history.map((h, i) => `
+    <div class="history-item" title="${h.prompt}">
+      <video src="${h.url}" muted loop onclick="showVideo('${h.url}')"></video>
+      <button class="del-btn" onclick="deleteHistory(${i},event)">✕</button>
+    </div>
+  `).join('');
+}
+
+function deleteHistory(i, e) {
+  e.stopPropagation();
+  history.splice(i, 1);
+  localStorage.setItem('hyin_history', JSON.stringify(history));
+  renderHistory();
+}
+
+// ─── Loading State ────────────────────────────────────────────────
+function setLoading(active) {
+  const btn = document.getElementById('generateBtn');
+  const overlay = document.getElementById('loadingOverlay');
+  btn.disabled = active;
+  btn.textContent = active ? '⏳ 生成中...' : '▶ 开始生成';
+  overlay.className = 'loading-overlay' + (active ? ' active' : '');
+}
+
+function setLoadingText(text) {
+  document.getElementById('loadingText').textContent = text;
+}
+</script>
+
+</body>
+</html>
