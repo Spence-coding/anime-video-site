@@ -607,11 +607,13 @@ async function generateVideo() {
     }
 
     const requestId = submitData.request_id;
+    const statusUrl = submitData.status_url;   // e.g. https://queue.fal.run/fal-ai/pika/.../status
+    const responseUrl = submitData.response_url; // e.g. https://queue.fal.run/fal-ai/pika/.../
     log(`任务已提交，ID: ${requestId}`, 'success');
     log('AI 生成中，请稍候（约1-3分钟）...', 'info');
     setLoading(true, 'AI 生成中，请稍候...');
 
-    pollResult(apiKey, requestId);
+    pollResult(apiKey, statusUrl, responseUrl);
 
   } catch (err) {
     setLoading(false);
@@ -621,30 +623,24 @@ async function generateVideo() {
 }
 
 // ── Poll ──────────────────────────────────────────────────────────
-async function pollResult(apiKey, requestId) {
+async function pollResult(apiKey, statusUrl, responseUrl) {
   try {
-    // fal.ai status: GET /requests/{id}/status
-    const encodedId = encodeURIComponent(requestId);
-    const statusRes = await fetch(
-      `/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${encodedId}/status`,
-      { headers: { 'Authorization': `Key ${apiKey}` } }
-    );
+    // Convert full fal URL to proxy path: https://queue.fal.run/X → /api/proxy?path=X
+    const statusPath = statusUrl.replace('https://queue.fal.run/', '');
+    const statusRes = await fetch(`/api/proxy?path=${encodeURIComponent(statusPath)}`, {
+      headers: { 'Authorization': `Key ${apiKey}` }
+    });
     const statusData = await statusRes.json();
     const status = statusData.status || statusData.raw;
-    log(`状态: ${typeof status === 'string' ? status : JSON.stringify(statusData).slice(0,120)}`);
+    log(`状态: ${status}`);
 
     if (status === 'COMPLETED') {
-      // Fetch result from response_url or standard result endpoint
-      const resultUrl = statusData.response_url
-        ? statusData.response_url.replace('https://queue.fal.run/', '/api/proxy?path=')
-        : `/api/proxy?path=fal-ai/pika/v2.2/text-to-video/requests/${encodedId}`;
-
-      const resultRes = await fetch(resultUrl, {
+      const resultPath = responseUrl.replace('https://queue.fal.run/', '');
+      const resultRes = await fetch(`/api/proxy?path=${encodeURIComponent(resultPath)}`, {
         headers: { 'Authorization': `Key ${apiKey}` }
       });
       const resultData = await resultRes.json();
 
-      // Try all known video URL locations
       const videoUrl =
         resultData?.video?.url ||
         resultData?.output?.video?.url ||
@@ -657,7 +653,7 @@ async function pollResult(apiKey, requestId) {
         addToHistory(videoUrl, document.getElementById('prompt').value.trim());
         showNotif('视频生成成功！🎉');
       } else {
-        log('响应: ' + JSON.stringify(resultData).slice(0, 200), 'info');
+        log('响应: ' + JSON.stringify(resultData).slice(0, 300), 'info');
         throw new Error('未获取到视频链接，请重试');
       }
       setLoading(false);
@@ -666,7 +662,7 @@ async function pollResult(apiKey, requestId) {
       throw new Error(statusData.error || '生成失败，请修改提示词重试');
 
     } else {
-      setTimeout(() => pollResult(apiKey, requestId), 5000);
+      setTimeout(() => pollResult(apiKey, statusUrl, responseUrl), 5000);
     }
 
   } catch (err) {
