@@ -7,8 +7,12 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { path } = req.query;
-  const targetUrl = `https://queue.fal.run/${path}`;
+  // Get full path from query - handles paths like "fal-ai/pika/v2.2/text-to-video/requests/xxx/status"
+  const fullPath = Array.isArray(req.query.path)
+    ? req.query.path.join('/')
+    : req.query.path;
+
+  const targetUrl = `https://queue.fal.run/${fullPath}`;
 
   try {
     const fetchOptions = {
